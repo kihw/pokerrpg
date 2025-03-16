@@ -1,5 +1,5 @@
-// src/components/GameHeader.tsx
-import React from "react";
+// src/components/GameHeader.tsx - Version optimisée
+import React, { memo } from "react";
 import { Trophy, Heart, Award, Settings } from "lucide-react";
 import { GAME_RULES } from "../constants/gameRules";
 
@@ -59,4 +59,5 @@ const GameHeader: React.FC<GameHeaderProps> = ({
   );
 };
 
-export default GameHeader;
+// Utiliser memo pour éviter les re-rendus inutiles du composant
+export default memo(GameHeader);

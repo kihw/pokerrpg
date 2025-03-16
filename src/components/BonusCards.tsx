@@ -1,5 +1,5 @@
-// src/components/BonusCards.tsx
-import React from "react";
+// src/components/BonusCards.tsx - Version optimisée
+import React, { memo, useCallback } from "react";
 import { Star } from "lucide-react";
 import { BonusCard } from "../types/cardTypes";
 
@@ -14,8 +14,8 @@ const BonusCards: React.FC<BonusCardsProps> = ({
   activeBonusCards,
   onToggleCard,
 }) => {
-  // Rarity color mapping
-  const getRarityColor = (rarity: BonusCard["rarity"]) => {
+  // Rarity color mapping - memoized outside des cycles de render
+  const getRarityColor = useCallback((rarity: BonusCard["rarity"]) => {
     switch (rarity) {
       case "Commune":
         return "bg-gray-500";
@@ -26,7 +26,7 @@ const BonusCards: React.FC<BonusCardsProps> = ({
       case "Légendaire":
         return "bg-yellow-600";
     }
-  };
+  }, []);
 
   if (bonusCards.length === 0) {
     return (
@@ -86,4 +86,4 @@ const BonusCards: React.FC<BonusCardsProps> = ({
   );
 };
 
-export default BonusCards;
+export default memo(BonusCards);
