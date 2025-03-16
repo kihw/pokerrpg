@@ -7,14 +7,14 @@ interface ShopProps {
   shopCards: BonusCard[];
   onBuyCard: (index: number) => void;
   playerPoints: number;
-  activeBonusCards: BonusCard[]; // Cartes bonus actuellement équipées
+  activeBonusCards?: BonusCard[]; // Make this prop optional
 }
 
 const Shop: React.FC<ShopProps> = ({
   shopCards,
   onBuyCard,
   playerPoints,
-  activeBonusCards,
+  activeBonusCards = [], // Provide a default empty array
 }) => {
   // Memoized function to get rarity styles
   const getRarityStyles = useCallback((rarity: BonusCard["rarity"]) => {
@@ -82,7 +82,7 @@ const Shop: React.FC<ShopProps> = ({
         obtenir des bonus spéciaux!
       </div>
 
-      {shopCards.length === 0 ? (
+      {!shopCards || shopCards.length === 0 ? (
         <p className="text-center text-gray-400 py-4">
           La boutique est vide. Revenez plus tard.
         </p>
@@ -172,7 +172,8 @@ export default memo(Shop, (prevProps, nextProps) => {
   // Rerender uniquement si les cartes changent ou si les points du joueur changent assez pour affecter l'achat
   return (
     prevProps.shopCards === nextProps.shopCards &&
-    prevProps.activeBonusCards.length === nextProps.activeBonusCards.length &&
+    (prevProps.activeBonusCards?.length || 0) ===
+      (nextProps.activeBonusCards?.length || 0) &&
     // Vérifier si les changements de points affectent la capacité d'achat
     !shopCardsAvailabilityChanged(
       prevProps.shopCards,
@@ -184,12 +185,15 @@ export default memo(Shop, (prevProps, nextProps) => {
 
 // Helper function to check if points change affects card availability
 function shopCardsAvailabilityChanged(
-  shopCards: BonusCard[],
+  shopCards: BonusCard[] = [],
   prevPoints: number,
   nextPoints: number
 ): boolean {
   // Si aucun changement de points, pas besoin de vérifier
   if (prevPoints === nextPoints) return false;
+
+  // Si pas de cartes, pas de changement d'achetabilité
+  if (!shopCards || shopCards.length === 0) return false;
 
   // Vérifier si les changements de points affectent la capacité d'achat
   return shopCards.some(

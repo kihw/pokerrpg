@@ -1,13 +1,23 @@
 // src/utils/shopManager.ts
-import { BonusCard, generateBonusCard } from "../types/BonusCard";
+import { BonusCard } from "../types/BonusCard";
+import { Suit, CardValue, Rarity } from "../constants/gameRules";
 
-export function generateShopCards(shopRotations: number): BonusCard[] {
-  const shopItems: BonusCard[] = [];
+/**
+ * Génère un ensemble de cartes pour la boutique
+ * @param shopRotations Le nombre de rotations de la boutique (affecte la probabilité de cartes rares)
+ * @param count Le nombre de cartes à générer (par défaut: 3)
+ * @returns Un tableau de cartes bonus pour la boutique
+ */
+export function generateShopCards(
+  shopRotations: number = 0,
+  count: number = 3
+): BonusCard[] {
+  const cards: BonusCard[] = [];
 
   // Ajuster la probabilité de cartes rares en fonction des rotations
   const rarityBoost = Math.min(shopRotations * 0.05, 0.3); // Max 30% de boost
 
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < count; i++) {
     // Générer une carte bonus unique
     const card = generateBonusCard();
 
@@ -24,14 +34,31 @@ export function generateShopCards(shopRotations: number): BonusCard[] {
       Épique: 500,
       Légendaire: 1000,
     };
-    card.points = costMultipliers[card.rarity];
 
-    shopItems.push(card);
+    // Ajuster les points en fonction de la rareté
+    const rarityMultiplier = {
+      Commune: 1,
+      Rare: 1.5,
+      Épique: 2.5,
+      Légendaire: 4,
+    };
+
+    // Mise à jour des points basés sur la valeur de carte et rareté
+    const valuePoints = getCardValuePoints(card.value);
+    card.points = Math.floor(valuePoints * rarityMultiplier[card.rarity]);
+
+    // Mise à jour du coût
+    card.cost = costMultipliers[card.rarity];
+
+    cards.push(card);
   }
 
-  return shopItems;
+  return cards;
 }
 
+/**
+ * Calcule le coût de rotation de la boutique
+ */
 export function calculateShopRotationCost(rotations: number): number {
   const BASE_COST = 50;
   const COST_INCREMENT = 25;
@@ -74,30 +101,13 @@ export function generateBonusCard(): BonusCard {
   else rarity = "Légendaire";
 
   // Calculer les points en fonction de la valeur de la carte et de sa rareté
-  const valuePoints = {
-    "2": 2,
-    "3": 3,
-    "4": 4,
-    "5": 5,
-    "6": 6,
-    "7": 7,
-    "8": 8,
-    "9": 9,
-    "10": 10,
-    J: 11,
-    Q: 12,
-    K: 13,
-    A: 14,
-  };
-
+  const basePoints = getCardValuePoints(value);
   const rarityMultiplier = {
     Commune: 1,
     Rare: 1.5,
     Épique: 2.5,
     Légendaire: 4,
   };
-
-  const basePoints = valuePoints[value];
   const points = Math.floor(basePoints * rarityMultiplier[rarity]);
 
   // Générer un effet basé sur la rareté
@@ -133,7 +143,9 @@ export function generateBonusCard(): BonusCard {
   };
 
   const name = `${
-    namePrefixes[rarity][Math.floor(Math.random() * 3)]
+    namePrefixes[rarity][
+      Math.floor(Math.random() * namePrefixes[rarity].length)
+    ]
   } Carte de ${family}`;
 
   return {
@@ -146,18 +158,32 @@ export function generateBonusCard(): BonusCard {
     cost,
     suit,
     value,
+    // Propriétés nécessaires pour la compatibilité avec ImprovableCard
+    improved: 0,
+    maxImprovement: 3,
+    improvementBonus: 1,
   };
 }
 
 /**
- * Génère un ensemble de cartes pour la boutique
+ * Utilitaire pour obtenir les points selon la valeur de carte
  */
-export function generateShopCards(count: number = 3): BonusCard[] {
-  const cards: BonusCard[] = [];
+function getCardValuePoints(value: CardValue): number {
+  const valuePoints = {
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5,
+    "6": 6,
+    "7": 7,
+    "8": 8,
+    "9": 9,
+    "10": 10,
+    J: 11,
+    Q: 12,
+    K: 13,
+    A: 14,
+  };
 
-  for (let i = 0; i < count; i++) {
-    cards.push(generateBonusCard());
-  }
-
-  return cards;
+  return valuePoints[value] || 0;
 }

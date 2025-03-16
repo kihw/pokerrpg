@@ -3,6 +3,7 @@ import React, { memo } from "react";
 import Shop from "../Shop";
 import ImproveCards from "../ImproveCards";
 import { BonusCard, ImprovableCard } from "../../types/cardTypes";
+import { useGameContext } from "../../context/GameContext";
 
 interface ShopUpgradeAreaProps {
   shopCards: BonusCard[];
@@ -19,6 +20,9 @@ const ShopUpgradeArea: React.FC<ShopUpgradeAreaProps> = ({
   onBuyCard,
   onImproveCard,
 }) => {
+  // Get activeBonusCards from game context
+  const { activeBonusCards = [] } = useGameContext();
+
   return (
     <div className="flex space-x-4">
       <div className="w-1/2">
@@ -26,6 +30,7 @@ const ShopUpgradeArea: React.FC<ShopUpgradeAreaProps> = ({
           shopCards={shopCards}
           onBuyCard={onBuyCard}
           playerPoints={playerPoints}
+          activeBonusCards={activeBonusCards}
         />
       </div>
       <div className="w-1/2">
