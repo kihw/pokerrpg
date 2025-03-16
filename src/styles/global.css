@@ -1,0 +1,101 @@
+/* Import animations */
+@import "./animations.css";
+/* src/styles/global.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Root styles */
+:root {
+  --primary-bg: theme("colors.green.900");
+  --secondary-bg: theme("colors.green.800");
+  --text-color: theme("colors.white");
+}
+
+/* Global body styles */
+body {
+  @apply bg-green-900 text-white font-sans;
+  min-height: 100vh;
+  overscroll-behavior: none;
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-green-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-green-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-green-500;
+}
+
+/* Button base styles */
+.btn {
+  @apply py-2 px-4 rounded-lg transition-all duration-300 ease-in-out;
+}
+
+.btn-primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700;
+}
+
+.btn-secondary {
+  @apply bg-gray-600 text-white hover:bg-gray-700;
+}
+
+.btn-success {
+  @apply bg-green-600 text-white hover:bg-green-700;
+}
+
+.btn-danger {
+  @apply bg-red-600 text-white hover:bg-red-700;
+}
+
+/* Card styles */
+.card {
+  @apply rounded-lg shadow-md transition-all duration-300;
+}
+
+.card-hover {
+  @apply hover:scale-105 hover:shadow-lg;
+}
+
+/* Typography */
+h1,
+h2,
+h3 {
+  @apply text-yellow-300;
+}
+
+/* Game panel */
+.game-panel {
+  @apply bg-black bg-opacity-50 rounded-lg p-4;
+}
+
+/* Utility classes */
+.glass-morphism {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  body {
+    @apply text-sm;
+  }
+
+  .btn {
+    @apply py-1 px-2;
+  }
+}
