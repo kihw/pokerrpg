@@ -18,6 +18,10 @@ import { createDeck, shuffleDeck } from "../utils/deck";
 import { GAME_RULES } from "../constants/gameRules";
 import { evaluateHand, calculatePoints } from "../utils/scoring";
 import { generateShopCards } from "../utils/shopManager";
+import {
+  calculateBonusHandPoints,
+  evaluateBonusHand,
+} from "../utils/bonusHandEvaluator";
 
 export type GameStatus = "idle" | "selecting" | "playing" | "gameOver";
 
@@ -37,6 +41,8 @@ export interface GameState {
   shopCards: ImprovableCard[];
   showShopAndUpgrades: boolean;
   discardRemaining: number;
+  bonusCards: BonusCard[]; // Toutes les cartes bonus possédées
+  activeBonusCards: BonusCard[]; // Cartes bonus actuellement équipées (max 5)
 }
 
 interface GameContextType extends GameState {
@@ -48,6 +54,8 @@ interface GameContextType extends GameState {
   redraw: () => void;
   discardCards: (cardsToDiscard: ImprovableCard[]) => void;
   buyDiscard: () => void;
+  buyShopCard: (index: number) => void;
+  toggleBonusCard: (index: number) => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -115,7 +123,93 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
       discardRemaining: GAME_RULES.MAX_DISCARDS,
     }));
   }, [gameState.deck]);
+  const buyShopCard = useCallback(
+    (index: number) => {
+      const card = gameState.shopCards[index];
 
+      if (!card) {
+        setGameState((prev) => ({
+          ...prev,
+          message: "Carte introuvable dans la boutique.",
+        }));
+        return;
+      }
+
+      // Vérifier si le joueur a assez de points
+      if (gameState.playerPoints < card.cost) {
+        setGameState((prev) => ({
+          ...prev,
+          message: `Pas assez de points pour acheter cette carte. (${card.cost} points nécessaires)`,
+        }));
+        return;
+      }
+
+      // Mettre à jour l'état du jeu avec la nouvelle carte
+      setGameState((prev) => {
+        // Créer une copie des cartes actuelles de la boutique
+        const updatedShopCards = [...prev.shopCards];
+        // Retirer la carte achetée
+        updatedShopCards.splice(index, 1);
+
+        return {
+          ...prev,
+          bonusCards: [...prev.bonusCards, card],
+          playerPoints: prev.playerPoints - card.cost,
+          shopCards: updatedShopCards,
+          message: `Vous avez acheté: ${card.name} (${card.rarity})`,
+        };
+      });
+    },
+    [gameState.shopCards, gameState.playerPoints]
+  );
+
+  // Activer/désactiver une carte bonus
+  const toggleBonusCard = useCallback((index: number) => {
+    setGameState((prev) => {
+      const selectedCard = prev.bonusCards[index];
+      if (!selectedCard) return prev;
+
+      // Si la carte est déjà active, la retirer
+      if (prev.activeBonusCards.includes(selectedCard)) {
+        return {
+          ...prev,
+          activeBonusCards: prev.activeBonusCards.filter(
+            (card) => card.id !== selectedCard.id
+          ),
+          message: `Carte "${selectedCard.name}" retirée.`,
+        };
+      }
+
+      // Si moins de 5 cartes bonus actives, ajouter la carte
+      if (prev.activeBonusCards.length < GAME_RULES.BONUS_CARD_SLOT_LIMIT) {
+        const newActiveBonusCards = [...prev.activeBonusCards, selectedCard];
+
+        // Vérifier si les 5 cartes forment une combinaison
+        let message = `Carte "${selectedCard.name}" équipée.`;
+        if (newActiveBonusCards.length === 5) {
+          const bonusHand = evaluateBonusHand(newActiveBonusCards);
+          if (bonusHand) {
+            message = `Combinaison formée: ${
+              bonusHand.rank
+            }! Multiplicateur x${bonusHand.multiplier.toFixed(1)}`;
+          }
+        }
+
+        return {
+          ...prev,
+          activeBonusCards: newActiveBonusCards,
+          message,
+        };
+      }
+
+      // Maximum active cards reached
+      return {
+        ...prev,
+        message:
+          "Vous ne pouvez pas équiper plus de 5 cartes bonus à la fois. Désactivez-en une d'abord.",
+      };
+    });
+  }, []);
   const selectCard = useCallback((card: ImprovableCard) => {
     setGameState((prev) => {
       // Si la carte est déjà sélectionnée, la désélectionner

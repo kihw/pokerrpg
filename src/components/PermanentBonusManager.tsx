@@ -6,7 +6,7 @@ import {
   canUpgradePermanentBonus,
   getUpgradeCost,
 } from "../types/PermanentBonus";
-import { Award, LevelUp } from "lucide-react";
+import { Award, ArrowUpCircle } from "lucide-react"; // Remplacé LevelUp par ArrowUpCircle
 import { useGameContext } from "../context/GameContext";
 
 const bonusStyleConfig = {
@@ -84,7 +84,8 @@ const BonusItem: React.FC<BonusItemProps> = ({ bonus }) => {
             onClick={() => upgradePermanentBonus(bonus.id)}
             disabled={!canUpgrade}
           >
-            <LevelUp className="mr-1" size={16} />
+            <ArrowUpCircle className="mr-1" size={16} />{" "}
+            {/* Remplacé LevelUp par ArrowUpCircle */}
             Améliorer ({upgradeCost} pts)
           </button>
         ) : (

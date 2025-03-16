@@ -1,12 +1,12 @@
-// src/components/ImproveCards.tsx - Version optimisée
-import React, { memo, useMemo } from "react";
+// src/components/ImproveCards.tsx
+import React, { memo } from "react";
 import Card from "./Card";
 import { ImprovableCard } from "../types/cardTypes";
 
 interface ImproveCardsProps {
   availableCards: ImprovableCard[];
   onImproveCard: (card: ImprovableCard) => void;
-  playerPoints: number; // Ajouter les points du joueur pour déterminer si l'amélioration est possible
+  playerPoints: number;
 }
 
 const ImproveCards: React.FC<ImproveCardsProps> = ({
@@ -75,6 +75,21 @@ const ImproveCards: React.FC<ImproveCardsProps> = ({
   );
 };
 
+// Helper pour vérifier si les points du joueur permettent d'améliorer au moins une carte
+function canImproveAnyCard(
+  cards: ImprovableCard[] = [],
+  points: number
+): boolean {
+  if (!cards || !Array.isArray(cards)) {
+    return false;
+  }
+
+  return cards.some(
+    (card) =>
+      card.improved < card.maxImprovement && points >= (card.improved + 1) * 20
+  );
+}
+
 export default memo(ImproveCards, (prevProps, nextProps) => {
   // Vérifier si les cartes ont changé
   if (prevProps.availableCards !== nextProps.availableCards) return false;
@@ -91,11 +106,3 @@ export default memo(ImproveCards, (prevProps, nextProps) => {
 
   return prevCanImprove === nextCanImprove;
 });
-
-// Helper pour vérifier si les points du joueur permettent d'améliorer au moins une carte
-function canImproveAnyCard(cards: ImprovableCard[], points: number): boolean {
-  return cards.some(
-    (card) =>
-      card.improved < card.maxImprovement && points >= (card.improved + 1) * 20
-  );
-}

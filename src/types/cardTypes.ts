@@ -32,8 +32,7 @@ export interface ImprovableCard extends BaseCard {
   improvementBonus: number;
 }
 
-// Carte bonus (cartes spéciales avec effets)
-export interface BonusCard {
+export interface BonusCard extends BaseCard {
   id: string;
   name: string;
   rarity: Rarity;
@@ -41,9 +40,8 @@ export interface BonusCard {
   points: number;
   family: string;
   cost: number;
-  // Pour assurer la compatibilité avec des composants génériques
-  suit?: Suit;
-  value?: CardValue;
+  suit: Suit;
+  value: CardValue;
 }
 
 // Type utilitaire pour permettre une utilisation flexible
