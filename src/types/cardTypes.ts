@@ -1,9 +1,7 @@
 // src/types/cardTypes.ts
 
-// Basic Card Suits
+// Types de base
 export type Suit = "♠" | "♥" | "♦" | "♣";
-
-// Card Values
 export type CardValue =
   | "2"
   | "3"
@@ -18,58 +16,69 @@ export type CardValue =
   | "Q"
   | "K"
   | "A";
+export type Rarity = "Commune" | "Rare" | "Épique" | "Légendaire";
 
-// Rarity Types
-export type RarityType = "Commune" | "Rare" | "Épique" | "Légendaire";
-
-// Base Card Interface
+// Interface de base pour toutes les cartes
 export interface BaseCard {
   id: string;
   suit: Suit;
   value: CardValue;
 }
 
-// Improvable Card Interface
+// Carte améliorable (cartes du jeu standard)
 export interface ImprovableCard extends BaseCard {
   improved: number;
   maxImprovement: number;
   improvementBonus: number;
 }
 
-// Bonus Card Interface
+// Carte bonus (cartes spéciales avec effets)
 export interface BonusCard {
+  id: string;
   name: string;
-  rarity: RarityType;
+  rarity: Rarity;
   effect: string;
   points: number;
   family: string;
   cost: number;
+  // Pour assurer la compatibilité avec des composants génériques
+  suit?: Suit;
+  value?: CardValue;
 }
 
-// Card Type Utilities
-export function isBaseCard(
-  card: BaseCard | ImprovableCard | BonusCard
-): card is BaseCard {
+// Type utilitaire pour permettre une utilisation flexible
+export type Card = ImprovableCard | BonusCard;
+
+// Fonctions de type guard
+export function isImprovableCard(card: Card): card is ImprovableCard {
   return (
-    (card as BaseCard).suit !== undefined &&
-    (card as BaseCard).value !== undefined
+    "improved" in card && "maxImprovement" in card && "improvementBonus" in card
   );
 }
 
-export function isImprovableCard(
-  card: BaseCard | ImprovableCard | BonusCard
-): card is ImprovableCard {
-  return (
-    (card as ImprovableCard).improved !== undefined &&
-    (card as ImprovableCard).maxImprovement !== undefined
-  );
+export function isBonusCard(card: Card): card is BonusCard {
+  return "rarity" in card && "effect" in card && "family" in card;
 }
 
-export function isBonusCard(
-  card: BaseCard | ImprovableCard | BonusCard
-): card is BonusCard {
-  return (
-    (card as BonusCard).rarity !== undefined &&
-    (card as BonusCard).effect !== undefined
-  );
+// Type pour l'état du jeu
+export type GameStatus = "idle" | "selecting" | "playing" | "gameOver";
+
+// Interface pour l'état global du jeu
+export interface GameState {
+  deck: ImprovableCard[];
+  playerHand: ImprovableCard[];
+  selectedCards: ImprovableCard[];
+  playedHand: ImprovableCard[];
+  playerHP: number;
+  playerPoints: number;
+  round: number;
+  gameStatus: GameStatus;
+  bonusCards: BonusCard[];
+  activeBonusCards: BonusCard[];
+  message: string;
+  totalGames: number;
+  bestScore: number;
+  shopCards: BonusCard[];
+  showShopAndUpgrades: boolean;
+  discardRemaining: number;
 }
