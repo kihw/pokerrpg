@@ -9,6 +9,7 @@ export type GameAction =
       payload: {
         deck: ImprovableCard[];
         shopCards: BonusCard[];
+        improvableCards: ImprovableCard[];
       };
     }
   | {
@@ -126,10 +127,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...initialGameState,
         deck: action.payload.deck,
         shopCards: action.payload.shopCards,
-        message:
-          'Nouvelle partie prête. Cliquez sur "Démarrer une partie" pour commencer.',
+        improvableCards: action.payload.improvableCards,
+        message: "Nouvelle partie prête.",
         // Conserver les bonus permanents entre les parties
         permanentBonuses: state.permanentBonuses,
+        // Conserver les cartes bonus achetées
+        bonusCards: state.bonusCards,
+        // Conserver les cartes bonus actives
+        activeBonusCards: state.activeBonusCards,
         // Conserver le nombre total de parties et le meilleur score
         totalGames: state.totalGames,
         bestScore: state.bestScore,
@@ -144,6 +149,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         playedHand: [],
         gameStatus: "selecting",
         round: 1,
+        playerHP: GAME_RULES.STARTING_HP,
+        playerPoints: 0,
         message:
           "Partie démarrée! Sélectionnez entre 1 et 5 cartes pour former votre main de poker.",
         totalGames: state.totalGames + 1,
@@ -152,6 +159,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         streakMultiplier: 1,
         lastPointsEarned: 0,
         lastHPChange: 0,
+        showShopAndUpgrades: false,
         currentBet: {
           amount: 0,
           type: "none",
@@ -251,58 +259,26 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         currentBet: newBet,
       };
 
-    // Fonction mise à jour pour gameReducer.ts - Fonction REDRAW
-
     case "REDRAW":
-      // Incrémenter le tour
-      const newRound = action.payload.newRound;
-
-      // Vérifier si la partie est terminée
-      if (newRound > GAME_RULES.MAX_ROUNDS) {
-        // Mettre à jour les statistiques de fin de partie
-        dispatch({
-          type: "GAME_OVER",
-          payload: {
-            newBestScore: Math.max(
-              state.playerPoints,
-              initialGameState.bestScore
-            ),
-          },
-        });
+      // Vérifier si le joueur a perdu (HP à 0)
+      if (state.playerHP <= 0) {
         return {
           ...state,
           gameStatus: "gameOver",
+          message: "Vous avez perdu! Vos points de vie ont atteint 0.",
         };
       }
 
-      // Garder les cartes non utilisées de la main précédente
-      const unusedCards = state.playerHand.filter(
-        (card) =>
-          !state.playedHand.some((playedCard) => playedCard.id === card.id)
-      );
-
-      // Déterminer combien de cartes piocher
-      const numCardsToDraw = Math.min(
-        GAME_RULES.INITIAL_HAND_SIZE - unusedCards.length,
-        action.payload.remainingDeck.length
-      );
-
-      // Piocher seulement le nombre nécessaire de nouvelles cartes
-      const newCards = action.payload.remainingDeck.slice(0, numCardsToDraw);
-      const remainingDeck = action.payload.remainingDeck.slice(numCardsToDraw);
-
-      // Combiner les cartes non utilisées avec les nouvelles cartes piochées
-      const newHand = [...unusedCards, ...newCards];
-
       return {
         ...state,
-        deck: remainingDeck,
-        playerHand: newHand,
+        deck: action.payload.remainingDeck,
+        playerHand: action.payload.newHand,
         selectedCards: [],
         playedHand: [],
         gameStatus: "selecting",
-        round: newRound,
-        message: `Tour ${newRound}/${GAME_RULES.MAX_ROUNDS}. Vous avez gardé ${unusedCards.length} carte(s).`,
+        round: action.payload.newRound,
+        message:
+          "Sélectionnez entre 1 et 5 cartes pour former votre main de poker.",
         showShopAndUpgrades: false,
         lastPointsEarned: 0,
         lastHPChange: 0,
@@ -330,22 +306,22 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
 
     case "IMPROVE_CARD":
-      // Améliorer la carte dans la main du joueur
+      // Améliorer la carte dans le jeu en cours
       const improvedHand = state.playerHand.map((card) =>
         card.id === action.payload.card.id
           ? { ...card, improved: card.improved + 1 }
           : card
       );
 
-      // Améliorer également la carte dans le deck si elle y est
+      // Améliorer également dans le deck
       const improvedDeck = state.deck.map((card) =>
         card.id === action.payload.card.id
           ? { ...card, improved: card.improved + 1 }
           : card
       );
 
-      // Améliorer la carte dans la liste des cartes améliorables
-      const improvedImprovableCards = state.improvableCards.map((card) =>
+      // Améliorer dans les cartes améliorables
+      const improvedCards = state.improvableCards.map((card) =>
         card.id === action.payload.card.id
           ? { ...card, improved: card.improved + 1 }
           : card
@@ -355,7 +331,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         playerHand: improvedHand,
         deck: improvedDeck,
-        improvableCards: improvedImprovableCards,
+        improvableCards: improvedCards,
         playerPoints: state.playerPoints - action.payload.cost,
         message: `Carte améliorée au niveau ${
           action.payload.card.improved + 1
@@ -365,12 +341,19 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "TOGGLE_BONUS_CARD":
       const selectedCard = state.bonusCards[action.payload.index];
 
+      if (!selectedCard) {
+        return {
+          ...state,
+          message: "Carte bonus introuvable.",
+        };
+      }
+
       // Si la carte est déjà active, la retirer
-      if (state.activeBonusCards.includes(selectedCard)) {
+      if (state.activeBonusCards.some((card) => card.id === selectedCard.id)) {
         return {
           ...state,
           activeBonusCards: state.activeBonusCards.filter(
-            (card) => card !== selectedCard
+            (card) => card.id !== selectedCard.id
           ),
           message: `Carte ${selectedCard.name} désactivée.`,
         };
@@ -438,6 +421,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             ? { ...bonus, currentLevel: bonus.currentLevel + 1 }
             : bonus
         ),
+        playerPoints:
+          state.playerPoints -
+          (state.permanentBonuses.find((b) => b.id === action.payload.bonusId)
+            ?.currentLevel || 0) *
+            50,
         message: `Bonus permanent amélioré !`,
       };
 

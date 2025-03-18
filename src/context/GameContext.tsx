@@ -223,11 +223,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
     const newRound = state.round + 1;
 
     // Vérifier si la partie est terminée
-    if (newRound > GAME_RULES.MAX_ROUNDS) {
+    if (newRound > GAME_RULES.MAX_ROUNDS || state.playerHP <= 0) {
       // Mettre à jour les statistiques de fin de partie
       completeGame({
         points: state.playerPoints,
-        isWin: state.playerPoints > 0,
+        isWin: state.playerHP > 0 && state.playerPoints > 0,
         roundsPlayed: state.round,
         cardsPlayed: state.playedHand.length,
         handsPlayed: {}, // À implémenter
@@ -251,12 +251,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
     }
 
     // Vérifier si le deck est vide
-    if (state.deck.length === 0) {
+    if (state.deck.length < GAME_RULES.INITIAL_HAND_SIZE) {
       dispatch({
         type: "SET_MESSAGE",
         payload: {
           message:
-            "Le deck est vide ! Vous avez terminé cette partie. Accédez à la boutique pour améliorer votre personnage avant la prochaine partie.",
+            "Le deck est presque vide ! Vous avez terminé cette partie. Accédez à la boutique pour améliorer votre personnage avant la prochaine partie.",
         },
       });
 
@@ -269,27 +269,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
       return;
     }
 
-    // Conserver les cartes non utilisées de la main précédente
-    const unusedCards = state.playerHand.filter(
-      (card) =>
-        !state.playedHand.some((playedCard) => playedCard.id === card.id)
-    );
-
-    // Déterminer combien de cartes piocher
-    const numCardsToDraw = Math.min(
-      GAME_RULES.INITIAL_HAND_SIZE - unusedCards.length,
-      state.deck.length
-    );
-
-    // Mélanger le deck avant de piocher
+    // Piocher une nouvelle main
     const shuffledDeck = shuffleDeck([...state.deck]);
-
-    // Piocher uniquement le nombre nécessaire de nouvelles cartes
-    const newCards = shuffledDeck.slice(0, numCardsToDraw);
+    const numCardsToDraw = Math.min(
+      GAME_RULES.INITIAL_HAND_SIZE,
+      shuffledDeck.length
+    );
+    const newHand = shuffledDeck.slice(0, numCardsToDraw);
     const remainingDeck = shuffledDeck.slice(numCardsToDraw);
-
-    // Fusionner les cartes non utilisées avec les nouvelles cartes
-    const newHand = [...unusedCards, ...newCards];
 
     dispatch({
       type: "REDRAW",
@@ -302,10 +289,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
   }, [
     state.round,
     state.deck,
+    state.playerHP,
     state.playerPoints,
     state.playedHand.length,
     state.bonusCards.length,
-    state.playerHand,
     completeGame,
   ]);
 
@@ -352,15 +339,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
   // Acheter une carte dans la boutique
   const buyShopCard = useCallback(
     (index: number) => {
-      const card = state.shopCards[index];
-
-      if (!card) {
+      if (index < 0 || index >= state.shopCards.length) {
         dispatch({
           type: "SET_MESSAGE",
           payload: { message: "Carte introuvable dans la boutique." },
         });
         return;
       }
+
+      const card = state.shopCards[index];
 
       // Vérifier si le joueur a assez de points
       if (state.playerPoints < card.cost) {
