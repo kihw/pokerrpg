@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  poker-rpg:
+    build:
+      context: https://github.com/kihw/pokerrpg.git
+      dockerfile: Dockerfile
+    ports:
+      - "2999:80"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
