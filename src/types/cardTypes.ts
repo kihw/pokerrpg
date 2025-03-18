@@ -1,4 +1,5 @@
 // src/types/cardTypes.ts
+import { PermanentBonus } from "./PermanentBonus";
 
 // Types de base
 export type Suit = "♠" | "♥" | "♦" | "♣";
@@ -32,6 +33,7 @@ export interface ImprovableCard extends BaseCard {
   improvementBonus: number;
 }
 
+// Carte bonus
 export interface BonusCard extends BaseCard {
   id: string;
   name: string;
@@ -79,4 +81,19 @@ export interface GameState {
   shopCards: BonusCard[];
   showShopAndUpgrades: boolean;
   discardRemaining: number;
+  permanentBonuses: PermanentBonus[];
+  improvableCards?: ImprovableCard[]; // Cartes disponibles pour amélioration
+
+  // Nouvelles propriétés pour le système amélioré
+  currentStreak: number; // Nombre de bonnes mains consécutives
+  streakMultiplier: number; // Multiplicateur de points pour les séries
+  lastPointsEarned: number; // Points gagnés lors de la dernière main
+  lastHPChange: number; // Changement de PV lors de la dernière main
+
+  // Système de pari
+  currentBet: {
+    amount: number;
+    type: "none" | "safe" | "risky" | "all-in";
+    multiplier: number;
+  };
 }

@@ -29,11 +29,13 @@ export type GameAction =
           totalPoints: number;
           pointMultiplier: number;
           penaltyAmount: number;
+          betBonus?: number;
         };
         rank: string;
         newHP: number;
         newShopCards: BonusCard[];
         message: string;
+        resetBet?: boolean;
       };
     }
   | {
@@ -69,10 +71,22 @@ export type GameAction =
       type: "TOGGLE_BONUS_CARD";
       payload: { index: number };
     }
+  | {
+      type: "PLACE_BET";
+      payload: {
+        amount: number;
+        betType: "safe" | "risky" | "all-in";
+      };
+    }
   | { type: "SET_MESSAGE"; payload: { message: string } }
+  | { type: "SHOW_SHOP"; payload: {} }
   | {
       type: "GAME_OVER";
       payload: { newBestScore: number };
+    }
+  | {
+      type: "UPGRADE_PERMANENT_BONUS";
+      payload: { bonusId: string };
     };
 
 export const initialGameState: GameState = {
@@ -93,6 +107,16 @@ export const initialGameState: GameState = {
   discardRemaining: GAME_RULES.MAX_DISCARDS,
   bonusCards: [],
   activeBonusCards: [],
+  currentStreak: 0,
+  streakMultiplier: 1,
+  lastPointsEarned: 0,
+  lastHPChange: 0,
+  currentBet: {
+    amount: 0,
+    type: "none",
+    multiplier: 0,
+  },
+  improvableCards: [],
 };
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
@@ -104,6 +128,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         shopCards: action.payload.shopCards,
         message:
           'Nouvelle partie prête. Cliquez sur "Démarrer une partie" pour commencer.',
+        // Conserver les bonus permanents entre les parties
+        permanentBonuses: state.permanentBonuses,
+        // Conserver le nombre total de parties et le meilleur score
+        totalGames: state.totalGames,
+        bestScore: state.bestScore,
       };
 
     case "START_GAME":
@@ -116,9 +145,18 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         gameStatus: "selecting",
         round: 1,
         message:
-          "Partie démarrée! Sélectionnez 5 cartes pour former votre main de poker.",
+          "Partie démarrée! Sélectionnez entre 1 et 5 cartes pour former votre main de poker.",
         totalGames: state.totalGames + 1,
         discardRemaining: GAME_RULES.MAX_DISCARDS,
+        currentStreak: 0,
+        streakMultiplier: 1,
+        lastPointsEarned: 0,
+        lastHPChange: 0,
+        currentBet: {
+          amount: 0,
+          type: "none",
+          multiplier: 0,
+        },
       };
 
     case "SELECT_CARD":
@@ -144,10 +182,54 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         message:
-          "Vous ne pouvez sélectionner que 5 cartes. Désélectionnez-en une d'abord.",
+          "Vous ne pouvez sélectionner que 5 cartes maximum. Désélectionnez-en une d'abord.",
       };
 
     case "PLAY_HAND":
+      // Déterminer si la main est "bonne" (pas de perte de PV)
+      const isGoodHand = action.payload.newHP >= state.playerHP;
+
+      // Calculer la nouvelle streak
+      const newStreak = isGoodHand ? state.currentStreak + 1 : 0;
+
+      // Calculer le multiplicateur de streak (max 3x)
+      const streakMultiplier =
+        newStreak >= 3 ? Math.min(1 + newStreak * 0.1, 3) : 1;
+
+      // Appliquer le multiplicateur de streak aux points si la streak est active
+      const streakPoints =
+        newStreak >= 3
+          ? Math.floor(
+              action.payload.pointsData.totalPoints * (streakMultiplier - 1)
+            )
+          : 0;
+
+      // Message de streak
+      let streakMessage = "";
+      if (newStreak >= 3) {
+        streakMessage = ` 🔥 Série de ${newStreak}: bonus ×${streakMultiplier.toFixed(
+          1
+        )}!`;
+      }
+
+      // Vérifier si le deck est vide
+      const isDeckEmpty = state.deck.length === 0;
+
+      // Réinitialiser le pari si demandé
+      const newBet = action.payload.resetBet
+        ? { amount: 0, type: "none", multiplier: 0 }
+        : state.currentBet;
+
+      // Calculer le changement de PV
+      const hpChange = action.payload.newHP - state.playerHP;
+
+      // Calculer les points gagnés
+      const pointsEarned =
+        action.payload.pointsData.totalPoints -
+        action.payload.pointsData.penaltyAmount +
+        streakPoints +
+        (action.payload.pointsData.betBonus || 0);
+
       return {
         ...state,
         playerHand: state.playerHand.filter(
@@ -156,16 +238,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         playedHand: state.selectedCards,
         selectedCards: [],
         playerHP: action.payload.newHP,
-        playerPoints: Math.max(
-          0,
-          state.playerPoints +
-            action.payload.pointsData.totalPoints -
-            action.payload.pointsData.penaltyAmount
-        ),
+        playerPoints: Math.max(0, state.playerPoints + pointsEarned),
         gameStatus: "playing",
-        message: action.payload.message,
+        message: action.payload.message + streakMessage,
         shopCards: action.payload.newShopCards,
-        showShopAndUpgrades: true,
+        // La boutique n'est disponible que si le deck est vide
+        showShopAndUpgrades: isDeckEmpty,
+        currentStreak: newStreak,
+        streakMultiplier,
+        lastPointsEarned: pointsEarned,
+        lastHPChange: hpChange,
+        currentBet: newBet,
       };
 
     case "REDRAW":
@@ -177,8 +260,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         playedHand: [],
         gameStatus: "selecting",
         round: action.payload.newRound,
-        message: "Sélectionnez 5 cartes pour former votre main de poker.",
+        message:
+          "Sélectionnez entre 1 et 5 cartes pour former votre main de poker.",
         showShopAndUpgrades: false,
+        lastPointsEarned: 0,
+        lastHPChange: 0,
       };
 
     case "DISCARD_CARDS":
@@ -203,13 +289,32 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
 
     case "IMPROVE_CARD":
+      // Améliorer la carte dans la main du joueur
+      const improvedHand = state.playerHand.map((card) =>
+        card.id === action.payload.card.id
+          ? { ...card, improved: card.improved + 1 }
+          : card
+      );
+
+      // Améliorer également la carte dans le deck si elle y est
+      const improvedDeck = state.deck.map((card) =>
+        card.id === action.payload.card.id
+          ? { ...card, improved: card.improved + 1 }
+          : card
+      );
+
+      // Améliorer la carte dans la liste des cartes améliorables
+      const improvedImprovableCards = state.improvableCards.map((card) =>
+        card.id === action.payload.card.id
+          ? { ...card, improved: card.improved + 1 }
+          : card
+      );
+
       return {
         ...state,
-        playerHand: state.playerHand.map((card) =>
-          card.id === action.payload.card.id
-            ? { ...card, improved: card.improved + 1 }
-            : card
-        ),
+        playerHand: improvedHand,
+        deck: improvedDeck,
+        improvableCards: improvedImprovableCards,
         playerPoints: state.playerPoints - action.payload.cost,
         message: `Carte améliorée au niveau ${
           action.payload.card.improved + 1
@@ -245,10 +350,35 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         message: "Vous ne pouvez pas équiper plus de 5 cartes bonus à la fois.",
       };
 
+    case "PLACE_BET":
+      const multiplier =
+        action.payload.betType === "safe"
+          ? 1.5
+          : action.payload.betType === "risky"
+          ? 2.5
+          : 4;
+
+      return {
+        ...state,
+        currentBet: {
+          amount: action.payload.amount,
+          type: action.payload.betType,
+          multiplier,
+        },
+        playerHP: state.playerHP - action.payload.amount, // Prélever les PV immédiatement
+        message: `Vous avez parié ${action.payload.amount} PV avec un multiplicateur ×${multiplier}!`,
+      };
+
     case "SET_MESSAGE":
       return {
         ...state,
         message: action.payload.message,
+      };
+
+    case "SHOW_SHOP":
+      return {
+        ...state,
+        showShopAndUpgrades: true,
       };
 
     case "GAME_OVER":
@@ -257,6 +387,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         gameStatus: "gameOver",
         message: "Partie terminée. Félicitations !",
         bestScore: action.payload.newBestScore,
+      };
+
+    case "UPGRADE_PERMANENT_BONUS":
+      return {
+        ...state,
+        permanentBonuses: state.permanentBonuses.map((bonus) =>
+          bonus.id === action.payload.bonusId
+            ? { ...bonus, currentLevel: bonus.currentLevel + 1 }
+            : bonus
+        ),
+        message: `Bonus permanent amélioré !`,
       };
 
     default:

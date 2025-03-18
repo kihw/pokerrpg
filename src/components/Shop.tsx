@@ -1,20 +1,27 @@
 // src/components/Shop.tsx
 import React, { memo, useCallback } from "react";
 import { BonusCard } from "../types/cardTypes";
-import { Heart, Diamond, Club, Spade } from "lucide-react";
+import {
+  Heart,
+  Diamond,
+  Club,
+  Spade,
+  ShoppingCart,
+  AlertCircle,
+} from "lucide-react";
 
 interface ShopProps {
   shopCards: BonusCard[];
   onBuyCard: (index: number) => void;
   playerPoints: number;
-  activeBonusCards?: BonusCard[]; // Make this prop optional
+  activeBonusCards?: BonusCard[]; // Optional prop
 }
 
 const Shop: React.FC<ShopProps> = ({
   shopCards,
   onBuyCard,
   playerPoints,
-  activeBonusCards = [], // Provide a default empty array
+  activeBonusCards = [], // Default to empty array
 }) => {
   // Memoized function to get rarity styles
   const getRarityStyles = useCallback((rarity: BonusCard["rarity"]) => {
@@ -63,31 +70,29 @@ const Shop: React.FC<ShopProps> = ({
   }, []);
 
   return (
-    <div className="bg-black bg-opacity-50 rounded-lg p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="font-bold text-yellow-300 text-lg">
-          Boutique de cartes bonus
-        </h2>
-
+    <div className="space-y-3">
+      <div className="flex justify-between items-center mb-2">
         <div className="bg-yellow-900 bg-opacity-50 px-3 py-1 rounded-full text-sm">
           <span className="font-bold text-yellow-300">
             {activeBonusCards.length}
           </span>
           <span className="text-yellow-200">/5 cartes équipées</span>
         </div>
-      </div>
 
-      <div className="mb-3 text-sm text-gray-300">
-        Collectionnez des cartes bonus et formez des combinaisons de poker pour
-        obtenir des bonus spéciaux!
+        <div className="text-sm text-yellow-200 font-bold">
+          Points: {playerPoints}
+        </div>
       </div>
 
       {!shopCards || shopCards.length === 0 ? (
-        <p className="text-center text-gray-400 py-4">
-          La boutique est vide. Revenez plus tard.
-        </p>
+        <div className="text-center py-6 bg-gray-800 bg-opacity-40 rounded-lg">
+          <AlertCircle className="mx-auto mb-2 text-gray-400" size={24} />
+          <p className="text-gray-400">
+            La boutique est vide. Revenez pour la prochaine partie.
+          </p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           {shopCards.map((card, index) => {
             const rarityStyles = getRarityStyles(card.rarity);
             const canBuy = playerPoints >= card.cost;
@@ -104,49 +109,51 @@ const Shop: React.FC<ShopProps> = ({
                       : "opacity-70"
                   }`}
               >
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className={`font-bold ${rarityStyles.text}`}>
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className={`font-bold ${rarityStyles.text} text-lg`}>
                       {card.name}
                     </h3>
-                    <span className="text-xs bg-black bg-opacity-50 px-2 py-1 rounded-full">
-                      {card.rarity}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center mb-2">
-                    <div className="bg-white rounded-md p-1 mr-2">
-                      {card.suit && getSuitIcon(card.suit)}
+                    <div className="flex items-center mt-1">
+                      <div className="bg-white rounded-md p-1 mr-2">
+                        {card.suit && getSuitIcon(card.suit)}
+                      </div>
+                      <span className="font-bold text-lg">{card.value}</span>
+                      <span className="text-xs bg-black bg-opacity-50 px-2 py-1 rounded-full ml-2">
+                        {card.rarity}
+                      </span>
                     </div>
-                    <span className="font-bold text-lg">{card.value}</span>
                   </div>
 
-                  <p className="text-sm mb-2">{card.effect}</p>
+                  <div className="text-sm">
+                    <span className="text-green-300 font-bold">
+                      +{card.points}
+                    </span>
+                    <span className="text-gray-300"> pts</span>
+                  </div>
+                </div>
 
-                  <div className="text-xs mb-3">
+                <p className="text-sm mb-3 italic">{card.effect}</p>
+
+                <div className="flex justify-between items-center">
+                  <div className="text-xs">
                     <span className="text-gray-300">Famille: </span>
                     <span className={`font-bold ${rarityStyles.text}`}>
                       {card.family}
                     </span>
                   </div>
-                </div>
-
-                <div className="mt-auto">
-                  <div className="text-xs mb-1 text-gray-300">
-                    Bonus de points: +{card.points}
-                  </div>
 
                   <button
-                    className={`w-full ${
+                    className={`flex items-center px-3 py-1 rounded ${
                       canBuy
-                        ? "bg-green-600 hover:bg-green-700"
-                        : "bg-gray-600 cursor-not-allowed"
-                    } 
-                      text-white py-2 rounded font-bold transition-colors`}
+                        ? "bg-green-600 hover:bg-green-700 text-white"
+                        : "bg-gray-600 cursor-not-allowed text-gray-300"
+                    }`}
                     onClick={() => canBuy && onBuyCard(index)}
                     disabled={!canBuy}
                   >
-                    Acheter ({card.cost})
+                    <ShoppingCart size={14} className="mr-1" />
+                    <span>{card.cost} pts</span>
                   </button>
                 </div>
               </div>
@@ -155,7 +162,7 @@ const Shop: React.FC<ShopProps> = ({
         </div>
       )}
 
-      <div className="mt-4 bg-blue-900 bg-opacity-30 p-3 rounded-lg text-sm">
+      <div className="bg-blue-900 bg-opacity-30 p-3 rounded-lg text-sm">
         <h3 className="font-bold text-blue-300 mb-1">Astuce</h3>
         <p className="text-gray-300">
           Formez des combinaisons de poker avec vos cartes bonus pour obtenir
