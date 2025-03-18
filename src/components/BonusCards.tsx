@@ -73,7 +73,7 @@ const BonusCards: React.FC<BonusCardsProps> = ({
     return null;
   }, [activeBonusCards]);
 
-  if (bonusCards.length === 0) {
+  if (!bonusCards || bonusCards.length === 0) {
     return (
       <div className="bg-black bg-opacity-50 rounded-lg p-4">
         <h2 className="font-bold mb-3 text-yellow-300">Cartes bonus</h2>
@@ -107,7 +107,9 @@ const BonusCards: React.FC<BonusCardsProps> = ({
 
       <div className="space-y-3">
         {bonusCards.map((card, index) => {
-          const isActive = activeBonusCards.includes(card);
+          const isActive = activeBonusCards.some(
+            (activeCard) => activeCard.id === card.id
+          );
           const rarityColor = getRarityColor(card.rarity);
 
           return (

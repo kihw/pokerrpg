@@ -251,17 +251,58 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         currentBet: newBet,
       };
 
+    // Fonction mise à jour pour gameReducer.ts - Fonction REDRAW
+
     case "REDRAW":
+      // Incrémenter le tour
+      const newRound = action.payload.newRound;
+
+      // Vérifier si la partie est terminée
+      if (newRound > GAME_RULES.MAX_ROUNDS) {
+        // Mettre à jour les statistiques de fin de partie
+        dispatch({
+          type: "GAME_OVER",
+          payload: {
+            newBestScore: Math.max(
+              state.playerPoints,
+              initialGameState.bestScore
+            ),
+          },
+        });
+        return {
+          ...state,
+          gameStatus: "gameOver",
+        };
+      }
+
+      // Garder les cartes non utilisées de la main précédente
+      const unusedCards = state.playerHand.filter(
+        (card) =>
+          !state.playedHand.some((playedCard) => playedCard.id === card.id)
+      );
+
+      // Déterminer combien de cartes piocher
+      const numCardsToDraw = Math.min(
+        GAME_RULES.INITIAL_HAND_SIZE - unusedCards.length,
+        action.payload.remainingDeck.length
+      );
+
+      // Piocher seulement le nombre nécessaire de nouvelles cartes
+      const newCards = action.payload.remainingDeck.slice(0, numCardsToDraw);
+      const remainingDeck = action.payload.remainingDeck.slice(numCardsToDraw);
+
+      // Combiner les cartes non utilisées avec les nouvelles cartes piochées
+      const newHand = [...unusedCards, ...newCards];
+
       return {
         ...state,
-        deck: action.payload.remainingDeck,
-        playerHand: action.payload.newHand,
+        deck: remainingDeck,
+        playerHand: newHand,
         selectedCards: [],
         playedHand: [],
         gameStatus: "selecting",
-        round: action.payload.newRound,
-        message:
-          "Sélectionnez entre 1 et 5 cartes pour former votre main de poker.",
+        round: newRound,
+        message: `Tour ${newRound}/${GAME_RULES.MAX_ROUNDS}. Vous avez gardé ${unusedCards.length} carte(s).`,
         showShopAndUpgrades: false,
         lastPointsEarned: 0,
         lastHPChange: 0,

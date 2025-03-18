@@ -131,6 +131,17 @@ const PokerRPG: React.FC = () => {
               <div className="bg-black bg-opacity-50 rounded-lg p-4 mb-4">
                 {playerHand.length === 0 ? (
                   <div>
+                    {/* Bouton pour démarrer une nouvelle partie */}
+                    <div className="flex justify-center mt-6">
+                      <button
+                        onClick={handleStartNewGame}
+                        className="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg text-white font-bold flex items-center"
+                      >
+                        Nouvelle Partie{" "}
+                        <ArrowRight className="ml-2" size={20} />
+                      </button>
+                    </div>
+
                     <p className="text-center text-yellow-300 font-bold mb-3">
                       Partie terminée ! Vous pouvez maintenant visiter la
                       boutique.

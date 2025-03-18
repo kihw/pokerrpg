@@ -269,14 +269,27 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
       return;
     }
 
-    // Piocher une nouvelle main
-    const shuffledDeck = shuffleDeck([...state.deck]);
-    const numCardsToDraw = Math.min(
-      GAME_RULES.INITIAL_HAND_SIZE,
-      shuffledDeck.length
+    // Conserver les cartes non utilisées de la main précédente
+    const unusedCards = state.playerHand.filter(
+      (card) =>
+        !state.playedHand.some((playedCard) => playedCard.id === card.id)
     );
-    const newHand = shuffledDeck.slice(0, numCardsToDraw);
+
+    // Déterminer combien de cartes piocher
+    const numCardsToDraw = Math.min(
+      GAME_RULES.INITIAL_HAND_SIZE - unusedCards.length,
+      state.deck.length
+    );
+
+    // Mélanger le deck avant de piocher
+    const shuffledDeck = shuffleDeck([...state.deck]);
+
+    // Piocher uniquement le nombre nécessaire de nouvelles cartes
+    const newCards = shuffledDeck.slice(0, numCardsToDraw);
     const remainingDeck = shuffledDeck.slice(numCardsToDraw);
+
+    // Fusionner les cartes non utilisées avec les nouvelles cartes
+    const newHand = [...unusedCards, ...newCards];
 
     dispatch({
       type: "REDRAW",
@@ -292,6 +305,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
     state.playerPoints,
     state.playedHand.length,
     state.bonusCards.length,
+    state.playerHand,
     completeGame,
   ]);
 

@@ -61,7 +61,7 @@ const ShopUpgradeArea: React.FC<ShopUpgradeAreaProps> = ({
         <div className="w-full md:w-1/2">
           <div className="bg-gray-800 bg-opacity-50 rounded-lg p-3">
             <h3 className="font-bold text-green-300 mb-2 flex items-center">
-              <Tool className="mr-2" size={16} />
+              <Hammer className="mr-2" size={16} />
               Améliorer les Cartes
             </h3>
             <ImproveCards
